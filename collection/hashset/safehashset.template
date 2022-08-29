@@ -1,0 +1,78 @@
+package PACKAGE_NAME
+
+import "sync"
+
+type SafeGENERIC_NAMESet struct {
+	sync.RWMutex
+	m map[GENERIC_TYPE]struct{}
+}
+
+func NewSafeGENERIC_NAMESet(values ...GENERIC_TYPE) *SafeGENERIC_NAMESet {
+	s := &SafeGENERIC_NAMESet{
+		m: make(map[GENERIC_TYPE]struct{}, len(values)),
+	}
+	s.Add(values...)
+	return s
+}
+
+func (s *SafeGENERIC_NAMESet) Add(values ...GENERIC_TYPE) {
+	s.Lock()
+	for _, v := range values {
+		s.m[v] = exists
+	}
+	s.Unlock()
+}
+
+func (s *SafeGENERIC_NAMESet) Remove(values ...GENERIC_TYPE) {
+	s.Lock()
+	for _, v := range values {
+		delete(s.m, v)
+	}
+	s.Unlock()
+}
+
+func (s *SafeGENERIC_NAMESet) Contains(value GENERIC_TYPE) bool {
+	s.RLock()
+	_, ok := s.m[value]
+	s.RUnlock()
+	return ok
+}
+
+func (s *SafeGENERIC_NAMESet) Range(f func(value GENERIC_TYPE) bool) {
+	s.RLock()
+	for k := range s.m {
+		if !f(k) {
+			break
+		}
+	}
+	s.RUnlock()
+}
+
+func (s *SafeGENERIC_NAMESet) Merge(another *SafeGENERIC_NAMESet) {
+	s.Lock()
+	another.Range(func(str GENERIC_TYPE) bool {
+		s.Add(str)
+		return true
+	})
+	s.Unlock()
+}
+
+func (s *SafeGENERIC_NAMESet) GetSlice() []GENERIC_TYPE {
+	s.RLock()
+
+	slice := make([]GENERIC_TYPE, 0, len(s.m))
+	s.Range(func(value GENERIC_TYPE) bool {
+		slice = append(slice, value)
+		return true
+	})
+
+	s.RUnlock()
+	return slice
+}
+
+func (s *SafeGENERIC_NAMESet) Len() int {
+	s.RLock()
+	l := len(s.m)
+	s.RUnlock()
+	return l
+}

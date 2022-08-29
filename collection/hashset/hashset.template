@@ -1,0 +1,58 @@
+package PACKAGE_NAME
+
+type GENERIC_NAMESet struct {
+	m map[GENERIC_TYPE]struct{}
+}
+
+func NewGENERIC_NAMESet(values ...GENERIC_TYPE) *GENERIC_NAMESet {
+	s := &GENERIC_NAMESet{
+		m: make(map[GENERIC_TYPE]struct{}, len(values)),
+	}
+	s.Add(values...)
+	return s
+}
+
+func (s *GENERIC_NAMESet) Add(values ...GENERIC_TYPE) {
+	for _, v := range values {
+		s.m[v] = exists
+	}
+}
+
+func (s *GENERIC_NAMESet) Remove(values ...GENERIC_TYPE) {
+	for _, v := range values {
+		delete(s.m, v)
+	}
+}
+
+func (s *GENERIC_NAMESet) Contains(value GENERIC_TYPE) bool {
+	_, ok := s.m[value]
+	return ok
+}
+
+func (s *GENERIC_NAMESet) Range(f func(value GENERIC_TYPE) bool) {
+	for k := range s.m {
+		if !f(k) {
+			break
+		}
+	}
+}
+
+func (s *GENERIC_NAMESet) Merge(another *GENERIC_NAMESet) {
+	another.Range(func(str GENERIC_TYPE) bool {
+		s.Add(str)
+		return true
+	})
+}
+
+func (s *GENERIC_NAMESet) GetSlice() []GENERIC_TYPE {
+	slice := make([]GENERIC_TYPE, 0, len(s.m))
+	s.Range(func(value GENERIC_TYPE) bool {
+		slice = append(slice, value)
+		return true
+	})
+	return slice
+}
+
+func (s *GENERIC_NAMESet) Len() int {
+	return len(s.m)
+}
