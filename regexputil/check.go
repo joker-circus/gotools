@@ -166,8 +166,8 @@ func IsChineseNameStringEx(s string) (string, bool) {
 }
 
 // 是否包含中文字符
-func ContainerChinese(b string) bool {
-	return chineseRegexp.MatchString(b)
+func ContainerChinese(b []byte) bool {
+	return chineseRegexp.Match(b)
 }
 
 // 是否包含中文字符

@@ -12,19 +12,19 @@ func NameOfFunction(f interface{}) string {
 }
 
 // 获取调用函数的 Caller 信息。
-// 即 A 调用 B，B 通过 GetCallerInfo() 可以获取 A 的信息。
+// 即 A 调用 B，B 通过 CallerInfo() 可以获取 A 的信息。
 //
 // 返回：A 方法名、A 的文件名、A 的包名、A 的工作路径、A 调用 B 的所在行号、是否获取到 caller 信息。
 func CallerInfo() (funcName, fileName, packageName, workDir string, line int, ok bool) {
-	return getCallerInfo(2)
+	return getCallerInfo(3)
 }
 
 // 获取自身的函数的 Caller 信息。
-// 即 A 调用GetCallerInfo() 可以获取 A 的信息。
+// 即 A 调用 SelfCallerInfo() 可以获取 A 的信息。
 //
 // 返回：A 方法名、A 的文件名、A 的包名、A 的工作路径、A 调用 B 的所在行号、是否获取到 caller 信息。
 func SelfCallerInfo() (funcName, fileName, packageName, workDir string, line int, ok bool) {
-	return getCallerInfo(1)
+	return getCallerInfo(2)
 }
 
 // 获取调用者的 Caller 信息。
