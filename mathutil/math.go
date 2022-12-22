@@ -33,7 +33,11 @@ func QueryQuantile(list []float64, quantileList ...float64) (max float64, min fl
 	return
 }
 
-//求指定分位值，例如：QuantileAlgorithm(list, 0.99)
+// 求指定分位值，例如：QuantileAlgorithm(list, 0.99)。
+// 需要提前将 list 进行排序：
+// 	sort.SliceStable(list, func(i, j int) bool {
+//		return list[i] < list[j]
+//	})
 func QuantileAlgorithm(list []float64, quantile float64) float64 {
 	index := quantile * float64(len(list))
 
@@ -49,4 +53,12 @@ func QuantileAlgorithm(list []float64, quantile float64) float64 {
 	}
 
 	return list[result]
+}
+
+// 四舍五入。
+// dig：保留的小数位。
+// 例如： Round(9.3456, 2) = 9.35。
+func Round(x float64, dig int) float64 {
+	pow := math.Pow10(dig)
+	return math.Floor(x*pow+0.5) / pow
 }
