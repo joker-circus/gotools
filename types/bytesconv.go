@@ -1,4 +1,4 @@
-package bytesconv
+package types
 
 import (
 	"reflect"

@@ -15,6 +15,8 @@ type Query struct {
 	aggExpr     []string
 	havingExpr  []string
 	orderByExpr []string
+	limit       int
+	offset      int
 }
 
 func (q *Query) From(name string) *Query {
@@ -151,6 +153,16 @@ func (q *Query) OrderBy(exprs ...string) *Query {
 	return q
 }
 
+func (q *Query) Limit(limit int) *Query {
+	q.limit = limit
+	return q
+}
+
+func (q *Query) Offset(offset int) *Query {
+	q.offset = offset
+	return q
+}
+
 func (q *Query) String() (string, error) {
 	// GroupBy() must be called explicitly while calling Agg()
 	if len(q.aggExpr) > 0 && len(q.groupByExpr) == 0 {
@@ -177,6 +189,12 @@ func (q *Query) String() (string, error) {
 	}
 	if len(q.orderByExpr) > 0 {
 		template += fmt.Sprintf("order by %s\n", strings.Join(q.orderByExpr, ", "))
+	}
+	if q.limit > 0 {
+		template += fmt.Sprintf("limit %d\n", q.limit)
+	}
+	if q.offset > 0 {
+		template += fmt.Sprintf("offset %d\n", q.offset)
 	}
 
 	return template, nil

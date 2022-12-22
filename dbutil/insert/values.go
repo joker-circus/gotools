@@ -116,7 +116,7 @@ func (w *write) Error(err error) error {
 
 // Fork Values
 type SQL struct {
-	Table string
+	Table   string
 	Columns []string
 	Values  [][]interface{}
 }
@@ -124,7 +124,7 @@ type SQL struct {
 func (s SQL) BuildInsertSQL() (string, error) {
 	var w write
 	w.WriteString(fmt.Sprintf("INSERT INTO `%s` ", s.Table))
-	s.Build(&w)
+	s.buildInsertSQL(&w)
 	if w.err != nil {
 		return "", w.err
 	}
@@ -132,8 +132,8 @@ func (s SQL) BuildInsertSQL() (string, error) {
 	return w.String(), nil
 }
 
-// Build build from clause
-func (s SQL) Build(builder Builder) {
+// Build is build from clause
+func (s SQL) buildInsertSQL(builder Builder) {
 	if len(s.Columns) > 0 {
 		builder.WriteByte('(')
 		for idx, column := range s.Columns {
@@ -153,6 +153,62 @@ func (s SQL) Build(builder Builder) {
 
 			builder.WriteByte('(')
 			builder.WriteValues(builder, value...)
+			builder.WriteByte(')')
+		}
+	} else {
+		builder.WriteString("DEFAULT VALUES")
+	}
+}
+
+func (s SQL) ExplainSQL() (string, error) {
+	preSQL, err := s.PreSQL()
+	if err != nil {
+		return "", err
+	}
+
+	var args []interface{}
+	for _, v := range s.Values {
+		args = append(args, v...)
+	}
+
+	return ExplainSQL(preSQL, nil, `'`, args...), nil
+}
+func (s SQL) PreSQL() (string, error) {
+	var w write
+	w.WriteString(fmt.Sprintf("INSERT INTO `%s` ", s.Table))
+	s.buildPreSQL(&w)
+	if w.err != nil {
+		return "", w.err
+	}
+
+	return w.String(), nil
+}
+
+func (s SQL) buildPreSQL(builder Builder) {
+	if len(s.Columns) > 0 {
+		builder.WriteByte('(')
+		for idx, column := range s.Columns {
+			if idx > 0 {
+				builder.WriteByte(',')
+			}
+			builder.WriteColumn(column)
+		}
+		builder.WriteByte(')')
+
+		builder.WriteString(" VALUES ")
+
+		for idx, value := range s.Values {
+			if idx > 0 {
+				builder.WriteByte(',')
+			}
+
+			builder.WriteByte('(')
+			for j := range value {
+				if j > 0 {
+					builder.WriteByte(',')
+				}
+				builder.WriteByte('?')
+			}
 			builder.WriteByte(')')
 		}
 	} else {
