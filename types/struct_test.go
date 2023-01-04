@@ -34,11 +34,13 @@ type Example2 struct {
 func TestStructTagAllFields(t *testing.T) {
 	var example _Example
 	result := []string{"name", "age", "number", "de", "labels", "created_at", "d", "values", "value_2", "upper_values", "upper_value_2"}
-	assert.Equal(t, result, StructTagAllFields(example, "json"), "the should be equal")
+	tags, _ := StructTagAllFields(example, "json")
+	assert.Equal(t, result, tags, "the should be equal")
 }
 
 func TestStructTagExportedFields(t *testing.T) {
 	var example _Example
 	result := []string{"name", "age", "number", "labels", "created_at", "upper_values", "upper_value_2"}
-	assert.Equal(t, result, StructTagExportedFields(example, "json"), "the should be equal")
+	tags, _ := StructTagExportedFields(example, "json")
+	assert.Equal(t, result, tags, "the should be equal")
 }
