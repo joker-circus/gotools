@@ -8,7 +8,7 @@ import (
 
 type IPV4Net struct {
 	IP   IPV4
-	Mask int
+	Mask uint8
 }
 
 // return ipv4, masklen, error
@@ -28,11 +28,11 @@ func ParseIPV4Net(cidr string) (IPV4Net, error) {
 		return info, message
 	}
 
-	info.Mask, err = strconv.Atoi(address[1])
+	maskLen, err := strconv.Atoi(address[1])
 	if err != nil {
 		return info, message
 	}
-
+	info.Mask = uint8(maskLen)
 	return info, nil
 }
 
@@ -84,11 +84,11 @@ func (i IPV4Net) GetNetworkIPS() []IPV4 {
 // 获取网段最大值和最小值
 // return minIP, maxIP
 func (i IPV4Net) getIpMaskRange() (IPV4, IPV4) {
-	ip, maskLen := i.IP, i.Mask
-	seg1MinIp, seg1MaxIp := getIpSeg1Range(ip, maskLen)
-	seg2MinIp, seg2MaxIp := getIpSeg2Range(ip, maskLen)
-	seg3MinIp, seg3MaxIp := getIpSeg3Range(ip, maskLen)
-	seg4MinIp, seg4MaxIp := getIpSeg4Range(ip, maskLen)
+	p4, maskLen := i.IP, i.Mask
+	seg1MinIp, seg1MaxIp := getIpSeg1Range(p4[0], maskLen)
+	seg2MinIp, seg2MaxIp := getIpSeg2Range(p4[1], maskLen)
+	seg3MinIp, seg3MaxIp := getIpSeg3Range(p4[2], maskLen)
+	seg4MinIp, seg4MaxIp := getIpSeg4Range(p4[3], maskLen)
 
 	return newIPV4(seg1MinIp, seg2MinIp, seg3MinIp, seg4MinIp), newIPV4(seg1MaxIp, seg2MaxIp, seg3MaxIp, seg4MaxIp)
 }
@@ -107,55 +107,51 @@ func GetCidrIpRange(cidr string) (IPV4, IPV4, error) {
 }
 
 //得到第一段IP的区间（第一片段.第二片段.第三片段.第四片段）
-func getIpSeg1Range(ip IPV4, maskLen int) (int, int) {
-	ipSeg := ip.Seg1
+func getIpSeg1Range(ipSeg, maskLen uint8) (uint8, uint8) {
 	if maskLen > 8 {
 		return ipSeg, ipSeg
 	}
-	return getIpSegRange(uint8(ipSeg), uint8(8 - maskLen))
+	return getIpSegRange(ipSeg, 8-maskLen)
 }
 
 //得到第二段IP的区间（第一片段.第二片段.第三片段.第四片段）
-func getIpSeg2Range(ip IPV4, maskLen int) (int, int) {
-	ipSeg := ip.Seg2
+func getIpSeg2Range(ipSeg, maskLen uint8) (uint8, uint8) {
 	if maskLen > 16 {
 		return ipSeg, ipSeg
 	}
-	return getIpSegRange(uint8(ipSeg), uint8(16 - maskLen))
+	return getIpSegRange(ipSeg, 16-maskLen)
 }
 
 //得到第三段IP的区间（第一片段.第二片段.第三片段.第四片段）
-func getIpSeg3Range(ip IPV4, maskLen int) (int, int) {
-	ipSeg := ip.Seg3
+func getIpSeg3Range(ipSeg, maskLen uint8) (uint8, uint8) {
 	if maskLen > 24 {
 		return ipSeg, ipSeg
 	}
-	return getIpSegRange(uint8(ipSeg), uint8(24 - maskLen))
+	return getIpSegRange(ipSeg, uint8(24-maskLen))
 }
 
 //得到第四段IP的区间（第一片段.第二片段.第三片段.第四片段）
-func getIpSeg4Range(ip IPV4, maskLen int) (int, int) {
-	ipSeg := ip.Seg4
-	segMinIp, segMaxIp := getIpSegRange(uint8(ipSeg), uint8(32 - maskLen))
+func getIpSeg4Range(ipSeg, maskLen uint8) (uint8, uint8) {
+	segMinIp, segMaxIp := getIpSegRange(ipSeg, uint8(32-maskLen))
 	return segMinIp + 1, segMaxIp - 1
 }
 
 //根据用户输入的基础IP地址和CIDR掩码计算一个IP片段的区间
 // 	192.168.1.0/6
-// 	第一段参数 192 8-6     out  192,195
-// 	第二段参数 168 16-6	out  0,255
-// 	第一段参数 1 32-6		out  0,255
-// 	第一段参数 0 32-6		out  0,255
-func getIpSegRange(userSegIp, offset uint8) (int, int) {
+// 	第一段参数 192 8-6    out  192,195
+// 	第二段参数 168 16-6   out  0,255
+// 	第一段参数 1 32-6     out  0,255
+// 	第一段参数 0 32-6     out  0,255
+func getIpSegRange(userSegIp, offset uint8) (uint8, uint8) {
 	var ipSegMax uint8 = 255
 	netSegIp := ipSegMax << offset
 	segMinIp := netSegIp & userSegIp
-	segMaxIp := userSegIp & (255 << offset) | ^(255 << offset)
-	return int(segMinIp), int(segMaxIp)
+	segMaxIp := userSegIp&(255<<offset) | ^(255 << offset)
+	return segMinIp, segMaxIp
 }
 
 //计算得到CIDR地址范围内可拥有的主机数量
-func GetCidrHostNum(maskLen int) uint {
+func GetCidrHostNum(maskLen uint8) uint {
 	cidrIpNum := uint(0)
 	var i uint = uint(32 - maskLen - 1)
 	for ; i >= 1; i-- {
