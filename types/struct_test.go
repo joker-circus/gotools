@@ -31,16 +31,35 @@ type Example2 struct {
 	Value2 string `json:"upper_value_2"`
 }
 
+var example _Example = _Example{
+	d: _Example2{
+		"d1",
+		"d2",
+	},
+	_Example2: &_Example2{
+		"ptr_private_1",
+		"ptr_private_2",
+	},
+	Example2: &Example2{
+		"ptr_1",
+		"ptr_2",
+	},
+}
+
 func TestStructTagAllFields(t *testing.T) {
-	var example _Example
 	result := []string{"name", "age", "number", "de", "labels", "created_at", "d", "values", "value_2", "upper_values", "upper_value_2"}
 	tags, _ := StructTagAllFields(example, "json")
 	assert.Equal(t, result, tags, "the should be equal")
 }
 
 func TestStructTagExportedFields(t *testing.T) {
-	var example _Example
 	result := []string{"name", "age", "number", "labels", "created_at", "upper_values", "upper_value_2"}
 	tags, _ := StructTagExportedFields(example, "json")
+	assert.Equal(t, result, tags, "the should be equal")
+}
+
+func TestStructTagExportedFieldValues(t *testing.T) {
+	result := []interface{}{example.Name, example.Age, uint(0), example.Labels, example.CreatedAt, example.Example2.Values, example.Example2.Value2}
+	tags, _ := StructTagExportedFieldValues(example, "json")
 	assert.Equal(t, result, tags, "the should be equal")
 }
