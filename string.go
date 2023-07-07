@@ -1,16 +1,11 @@
-package types
+package gotools
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/joker-circus/gotools/internal"
 )
 
 func LowerSlice(values ...string) []string {
@@ -79,7 +74,8 @@ func Lcfirst(str string) string {
 // 例如：xx_yy to XxYx  xx_y_y to XxYY。
 //
 // 等同于：
-// 	s = strings.Replace(s, "_", " ", -1)
+//
+//	s = strings.Replace(s, "_", " ", -1)
 //	s = strings.Title(s)
 //	return strings.Replace(s, " ", "", -1)
 func CamelCase(s string) string {
@@ -130,51 +126,13 @@ func SnakeCase(s string) string {
 	return strings.ToLower(string(data[:]))
 }
 
-// MatchOneOf match one of the patterns
-func MatchOneOf(text string, patterns ...string) []string {
-	var (
-		re    *regexp.Regexp
-		value []string
-	)
-	for _, pattern := range patterns {
-		// (?flags): set flags within current group; non-capturing
-		// s: let . match \n (default false)
-		// https://github.com/google/re2/wiki/Syntax
-		re = regexp.MustCompile(pattern)
-		value = re.FindStringSubmatch(text)
-		if len(value) > 0 {
-			return value
-		}
-	}
-	return nil
-}
-
-// MatchAll return all matching results
-func MatchAll(text, pattern string) [][]string {
-	re := regexp.MustCompile(pattern)
-	value := re.FindAllStringSubmatch(text, -1)
-	return value
-}
-
-// FileSize return the file size of the specified path file
-func FileSize(filePath string) (int64, bool, error) {
-	file, err := os.Stat(filePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return 0, false, nil
-		}
-		return 0, false, err
-	}
-	return file.Size(), true, nil
-}
-
 // Domain get the domain of given URL
 func Domain(url string) string {
 	domainPattern := `([a-z0-9][-a-z0-9]{0,62})\.` +
 		`(com\.cn|com\.hk|` +
 		`cn|com|net|edu|gov|biz|org|info|pro|name|xxx|xyz|be|` +
 		`me|top|cc|tv|tt)`
-	domain := MatchOneOf(url, domainPattern)
+	domain := internal.MatchOneOf(url, domainPattern)
 	if domain != nil {
 		return domain[1]
 	}
@@ -194,57 +152,6 @@ func LimitLength(s string, length int) string {
 		return string(str[:length-len(ELLIPSES)]) + ELLIPSES
 	}
 	return s
-}
-
-// FileName Converts a string to a valid filename
-func FileName(name, ext string, length int) string {
-	rep := strings.NewReplacer("\n", " ", "/", " ", "|", "-", ": ", "：", ":", "：", "'", "’")
-	name = rep.Replace(name)
-	if runtime.GOOS == "windows" {
-		rep = strings.NewReplacer("\"", " ", "?", " ", "*", " ", "\\", " ", "<", " ", ">", " ")
-		name = rep.Replace(name)
-	}
-	limitedName := LimitLength(name, length)
-	if ext == "" {
-		return limitedName
-	}
-	return fmt.Sprintf("%s.%s", limitedName, ext)
-}
-
-// FilePath gen valid file path
-func FilePath(name, ext string, length int, outputPath string, escape bool) (string, error) {
-	if outputPath != "" {
-		if _, err := os.Stat(outputPath); err != nil {
-			return "", err
-		}
-	}
-	var fileName string
-	if escape {
-		fileName = FileName(name, ext, length)
-	} else {
-		fileName = fmt.Sprintf("%s.%s", name, ext)
-	}
-	return filepath.Join(outputPath, fileName), nil
-}
-
-// FileLineCounter Counts line in file
-func FileLineCounter(r io.Reader) (int, error) {
-	buf := make([]byte, 32*1024)
-	count := 0
-	lineSep := []byte{'\n'}
-
-	for {
-		c, err := r.Read(buf)
-		count += bytes.Count(buf[:c], lineSep)
-
-		switch {
-		case err == io.EOF:
-			return count, nil
-
-		case err != nil:
-			return count, err
-		}
-	}
 }
 
 // Reverse Reverse a string

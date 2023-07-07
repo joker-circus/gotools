@@ -23,7 +23,7 @@ func BuildPreSQL(dest interface{}) (sql string, err error) {
 		return "", err
 	}
 
-	return sqlBuild.ExplainSQL()
+	return sqlBuild.PreSQL()
 }
 
 func buildSQL(dest interface{}) (SQL, error) {

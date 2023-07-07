@@ -6,8 +6,8 @@ import (
 	"go/ast"
 	"reflect"
 
+	"github.com/joker-circus/gotools"
 	"github.com/joker-circus/gotools/inflection"
-	"github.com/joker-circus/gotools/types"
 )
 
 type Schema struct {
@@ -57,7 +57,7 @@ func GetSchema(dest interface{}) (*Schema, error) {
 	}
 
 	modelValue := reflect.New(modelType)
-	tableName := inflection.Plural(types.SnakeCase(modelType.Name()))
+	tableName := inflection.Plural(gotools.SnakeCase(modelType.Name()))
 	if tabler, ok := modelValue.Interface().(Tabler); ok {
 		tableName = tabler.TableName()
 	}

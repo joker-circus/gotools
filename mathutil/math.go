@@ -1,7 +1,9 @@
 package mathutil
 
 import (
+	"crypto/rand"
 	"math"
+	"math/big"
 	"sort"
 )
 
@@ -61,4 +63,10 @@ func QuantileAlgorithm(list []float64, quantile float64) float64 {
 func Round(x float64, dig int) float64 {
 	pow := math.Pow10(dig)
 	return math.Floor(x*pow+0.5) / pow
+}
+
+// 随机数
+func Rand(min, max int64) int64 {
+	result, _ := rand.Int(rand.Reader, big.NewInt(max-min))
+	return result.Int64() + min
 }

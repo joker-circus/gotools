@@ -1,4 +1,4 @@
-package types
+package gotools
 
 import (
 	"fmt"

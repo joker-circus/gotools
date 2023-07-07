@@ -1,4 +1,4 @@
-package types
+package gotools
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ func TestSliceInterface(t *testing.T) {
 	}
 }
 
-//按照一定的间隔分割数组
+// 按照一定的间隔分割数组
 func SplitString(a []string, gap int) [][]string {
 	dataLen := len(a) / gap
 	if len(a)%gap != 0 {

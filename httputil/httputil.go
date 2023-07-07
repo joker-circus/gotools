@@ -19,8 +19,21 @@ import (
 	"golang.org/x/text/encoding/htmlindex"
 )
 
-func Post(url string, body interface{}, header map[string]string) ([]byte, error) {
-	resp, err := Request(http.MethodPost, url, body, header, make(map[string]interface{}))
+type ResponseValidator func(resp *http.Response) error
+
+func ValidatorStatusCode(resp *http.Response, targetStatusCode int) error {
+	if resp.StatusCode == targetStatusCode {
+		return nil
+	}
+	return fmt.Errorf("the current status code is %d, but the expected status code is %d", resp.StatusCode, targetStatusCode)
+}
+
+func StatusOK(resp *http.Response) error {
+	return ValidatorStatusCode(resp, http.StatusOK)
+}
+
+func Post(url string, body interface{}, header map[string]string, validators ...ResponseValidator) ([]byte, error) {
+	resp, err := Request(http.MethodPost, url, body, header, make(map[string]interface{}), validators...)
 	if err != nil {
 		return nil, err
 	}
@@ -35,8 +48,8 @@ func Post(url string, body interface{}, header map[string]string) ([]byte, error
 	return respBody, nil
 }
 
-func Get(url string, query map[string]interface{}, header map[string]string) ([]byte, error) {
-	resp, err := Request(http.MethodGet, url, nil, header, query)
+func Get(url string, query map[string]interface{}, header map[string]string, validators ...ResponseValidator) ([]byte, error) {
+	resp, err := Request(http.MethodGet, url, nil, header, query, validators...)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +69,7 @@ func Get(url string, query map[string]interface{}, header map[string]string) ([]
 
 	body, err := io.ReadAll(reader)
 	if err != nil && err != io.EOF {
-		return nil,err
+		return nil, err
 	}
 	return body, nil
 }
@@ -75,7 +88,8 @@ func BytesBody(body interface{}) ([]byte, error) {
 	return json.Marshal(body)
 }
 
-func Request(method, url string, body interface{}, header map[string]string, query map[string]interface{}) (*http.Response, error) {
+// 如果 validators 为 null，默认验证 http code 是否为 200。
+func Request(method, url string, body interface{}, header map[string]string, query map[string]interface{}, validators ...ResponseValidator) (*http.Response, error) {
 	client := &http.Client{}
 
 	byteParams, err := BytesBody(body)
@@ -106,11 +120,17 @@ func Request(method, url string, body interface{}, header map[string]string, que
 		return nil, errors.WithStack(err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("resp.StatusCode is %v, req body is %+v", resp.StatusCode, string(byteParams))
+	if len(validators) == 0 {
+		validators = append(validators, StatusOK)
+	}
+	for _, validator := range validators {
+		err = validator(resp)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
-	return resp, err
+	return resp, nil
 }
 
 // Size get size of the header
@@ -198,9 +218,9 @@ func DecodeHTMLBody(body io.Reader, charsets ...string) (io.Reader, error) {
 	return body, nil
 }
 
-func JoinPaths(uri string, paths ... string) string {
+func JoinPaths(uri string, paths ...string) string {
 	urlObj, _ := url.Parse(uri)
-	newPath := make([]string, 0, len(paths) + 1)
+	newPath := make([]string, 0, len(paths)+1)
 	newPath = append(newPath, urlObj.Path)
 	newPath = append(newPath, paths...)
 	urlObj.Path = path.Join(newPath...)
