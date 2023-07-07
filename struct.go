@@ -129,3 +129,47 @@ func (r *StructX) structValueTagFields(structType reflect.Type, structValue refl
 
 	return f(structField, structValue)
 }
+
+// 结构体数组转 Table 数据
+func StructArrayToTable(dest interface{}) (columns []interface{}, rows [][]interface{}) {
+	rv := reflect.Indirect(reflect.ValueOf(dest))
+	if rv.Kind() != reflect.Slice {
+		return
+	}
+
+	if rv.Len() == 0 {
+		return
+	}
+
+	for i := 0; i < rv.Len(); i++ {
+		rv.Index(i)
+		r := StructX{
+			T: rv.Index(i).Type(),
+			V: rv.Index(i),
+		}
+		tagFields := make(map[string]string)
+		var tags []interface{}
+		r.RangeFields(false, func(sf reflect.StructField, v reflect.Value) bool {
+			tagValue := sf.Tag.Get("json")
+			if len(tagValue) == 0 {
+				return true
+			}
+
+			if i == 0 {
+				columns = append(columns, tagValue)
+			}
+
+			if _, ok := tagFields[tagValue]; !ok {
+				tagFields[tagValue] = sf.Name
+				if v.CanInterface() {
+					tags = append(tags, v.Interface())
+				} else {
+					tags = append(tags, fmt.Sprint(v))
+				}
+			}
+			return true
+		})
+		rows = append(rows, tags)
+	}
+	return
+}

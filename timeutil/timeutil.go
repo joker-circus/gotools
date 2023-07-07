@@ -182,7 +182,7 @@ func GetTodayDuration(start, end time.Time, todayDate string) (int64, int64, int
 	return startAt, endAt, todayDuration, nil
 }
 
-//计算某一个月的天数
+// 计算某一个月的天数
 func CountMonthDays(month string) (int, error) {
 	monthTime, err := ToMonthTime(month)
 	if err != nil {
@@ -208,13 +208,13 @@ func count(year int, month time.Month) (days int) {
 	return
 }
 
-//获取传入的时间所在月份的第一天，即某月第一天的0点。如传入time.Now(), 返回当前月份的第一天0点时间
+// 获取传入的时间所在月份的第一天，即某月第一天的0点。如传入time.Now(), 返回当前月份的第一天0点时间
 func GetFirstDateOfMonth(d time.Time) time.Time {
 	d = d.AddDate(0, 0, -d.Day()+1)
 	return GetZeroTime(d)
 }
 
-//获取传入的时间所在月份的最后一天，即某月最后一天的0点。如传入time.Now(), 返回当前月份的最后一天0点时间。
+// 获取传入的时间所在月份的最后一天，即某月最后一天的0点。如传入time.Now(), 返回当前月份的最后一天0点时间。
 func GetLastDateOfMonth(d time.Time) time.Time {
 	return GetFirstDateOfMonth(d).AddDate(0, 1, -1)
 }
@@ -243,8 +243,8 @@ func GetLastTimePoint(t time.Time, interval int) time.Time {
 		return t
 	}
 	tt := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
-	e := time.Duration(t.Minute()%interval)
-	return tt.Add(-e*time.Minute)
+	e := time.Duration(t.Minute() % interval)
+	return tt.Add(-e * time.Minute)
 }
 
 // GetStartTimeOfDate 获取时间d当天的0点值
@@ -255,4 +255,20 @@ func GetStartTimeOfDate(d time.Time) time.Time {
 // GetEndTimeOfDate 获取时间d当天的23:59:59值
 func GetEndTimeOfDate(d time.Time) time.Time {
 	return time.Date(d.Year(), d.Month(), d.Day(), 23, 59, 59, 0, d.Location())
+}
+
+// RangeTime 将 t1, t2 按照最大 interval 划分。
+func RangeTime(t1, t2 time.Time, interval time.Duration, f func(t1, t2 time.Time) bool) {
+	var end time.Time
+	for t1.Before(t2) {
+		// 调用函数 f 处理打印操作
+		end = t1.Add(interval)
+		if end.After(t2) {
+			end = t2
+		}
+		if !f(t1, end) {
+			return
+		}
+		t1 = end
+	}
 }

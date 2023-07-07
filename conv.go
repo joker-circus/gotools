@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 func ToString(v interface{}) string {
@@ -78,4 +79,39 @@ func ToFloat64(v interface{}) (float64, error) {
 	default:
 		return 0, fmt.Errorf("cannot convert type %v to float64", reflect.TypeOf(v))
 	}
+}
+
+var defaultLayouts = []string{
+	"2006-01-02 15:04:05",
+	"2006-01-02",
+	"2006/01/02 15:04:05",
+	"2006/01/02",
+	"01/02/2006 15:04:05",
+	"01/02/2006",
+	time.Layout,
+	time.ANSIC,
+	time.UnixDate,
+	time.RubyDate,
+	time.RFC822,
+	time.RFC822Z,
+	time.RFC850,
+	time.RFC1123,
+	time.RFC1123Z,
+	time.RFC3339,
+	time.RFC3339Nano,
+}
+
+func Time(v interface{}, layouts ...string) (time.Time, bool) {
+	switch value := v.(type) {
+	case time.Time:
+		return value, true
+	case string:
+		for _, layout := range append(defaultLayouts, layouts...) {
+			t, err := time.Parse(layout, value)
+			if err == nil {
+				return t, true
+			}
+		}
+	}
+	return time.Now(), false
 }
