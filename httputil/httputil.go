@@ -2,6 +2,7 @@ package httputil
 
 import (
 	"bufio"
+	"bytes"
 	"compress/flate"
 	"compress/gzip"
 	"encoding/json"
@@ -17,6 +18,8 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding/htmlindex"
+	
+	"github.com/joker-circus/gotools/internal"
 )
 
 type ResponseValidator func(resp *http.Response) error
@@ -30,6 +33,12 @@ func ValidatorStatusCode(resp *http.Response, targetStatusCode int) error {
 
 func StatusOK(resp *http.Response) error {
 	return ValidatorStatusCode(resp, http.StatusOK)
+}
+
+func PostForm(url string, data url.Values, header map[string]string, validators ...ResponseValidator) ([]byte, error) {
+	header["Content-Type"] = "application/x-www-form-urlencoded"
+	body := internal.S2b(data.Encode())
+	return Post(url, body, header, validators...)
 }
 
 func Post(url string, body interface{}, header map[string]string, validators ...ResponseValidator) ([]byte, error) {
@@ -78,7 +87,7 @@ func Get(url string, query map[string]interface{}, header map[string]string, val
 // 其他类型返回 json.Marshal(body)
 func BytesBody(body interface{}) ([]byte, error) {
 	if v, ok := body.(string); ok {
-		return []byte(v), nil
+		return internal.S2b(v), nil
 	}
 
 	if v, ok := body.([]byte); ok {
@@ -98,7 +107,7 @@ func Request(method, url string, body interface{}, header map[string]string, que
 	}
 
 	var req *http.Request
-	req, err = http.NewRequest(method, url, strings.NewReader(string(byteParams)))
+	req, err = http.NewRequest(method, url, bytes.NewReader(byteParams))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

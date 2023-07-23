@@ -1,4 +1,4 @@
-package format
+package gotools
 
 import (
 	"bytes"
@@ -48,11 +48,10 @@ func JsonIndentBytes(data []byte) string {
 }
 
 // 在JSON引号字符串中不转义有问题的HTML字符。
-func JsonIndentStructWithSetEscapeHTML(data interface{}) string {
+func JsonStructDisableEscapeHTML(data interface{}) string {
 	bf := bytes.NewBuffer([]byte{})
 	jsonEncoder := json.NewEncoder(bf)
 	jsonEncoder.SetEscapeHTML(false)
-	jsonEncoder.SetIndent("", "    ")
 	_ = jsonEncoder.Encode(data)
 	return bf.String()
 }
