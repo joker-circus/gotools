@@ -1,4 +1,4 @@
-package models
+package datatypes
 
 import (
 	"encoding/json"

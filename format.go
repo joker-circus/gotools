@@ -21,7 +21,7 @@ func Json(data interface{}) string {
 
 func JsonIndent(data interface{}) string {
 	if v, ok := data.(string); ok {
-		return JsonIndentBytes([]byte(v))
+		return JsonIndentBytes(internal.S2b(v))
 	}
 
 	if v, ok := data.([]byte); ok {
@@ -33,12 +33,12 @@ func JsonIndent(data interface{}) string {
 
 func JsonStruct(data interface{}) string {
 	out, _ := json.Marshal(data)
-	return string(out)
+	return internal.B2s(out)
 }
 
 func JsonIndentStruct(data interface{}) string {
 	out, _ := json.MarshalIndent(data, "", " ")
-	return string(out)
+	return internal.B2s(out)
 }
 
 func JsonIndentBytes(data []byte) string {
@@ -48,10 +48,30 @@ func JsonIndentBytes(data []byte) string {
 }
 
 // 在JSON引号字符串中不转义有问题的HTML字符。
-func JsonStructDisableEscapeHTML(data interface{}) string {
+func JsonEscapeHTML(data interface{}) string {
+	if v, ok := data.(string); ok {
+		return JsonEscapeHTMLBytes(internal.S2b(v))
+	}
+
+	if v, ok := data.([]byte); ok {
+		return JsonEscapeHTMLBytes(v)
+	}
+
+	return JsonEscapeHTMLStruct(data)
+}
+
+// 在JSON引号字符串中不转义有问题的HTML字符。
+func JsonEscapeHTMLStruct(data interface{}) string {
 	bf := bytes.NewBuffer([]byte{})
 	jsonEncoder := json.NewEncoder(bf)
 	jsonEncoder.SetEscapeHTML(false)
 	_ = jsonEncoder.Encode(data)
+	return bf.String()
+}
+
+// 在JSON引号字符串中不转义有问题的HTML字符。
+func JsonEscapeHTMLBytes(data []byte) string {
+	bf := bytes.NewBuffer([]byte{})
+	json.HTMLEscape(bf, data)
 	return bf.String()
 }
