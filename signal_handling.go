@@ -21,10 +21,8 @@ func OnInterrupt(fn func()) {
 		syscall.SIGTERM,
 		// syscall.SIGQUIT, // Quit from keyboard, "kill -3"
 	)
-	go func() {
-		for _ = range signalChan {
-			fn()
-			os.Exit(0)
-		}
-	}()
+	for _ = range signalChan {
+		fn()
+		os.Exit(0)
+	}
 }

@@ -67,6 +67,10 @@ func (w *write) WriteValues(writer Writer, vars ...interface{}) {
 			w.WriteValues(writer, vv...)
 			writer.WriteByte(')')
 
+		case nil:
+			writer.WriteString("NULL")
+			continue
+
 		default:
 			switch rv.Kind() {
 			case reflect.Slice, reflect.Array:

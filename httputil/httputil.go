@@ -18,7 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding/htmlindex"
-	
+
 	"github.com/joker-circus/gotools/internal"
 )
 
@@ -35,6 +35,10 @@ func StatusOK(resp *http.Response) error {
 	return ValidatorStatusCode(resp, http.StatusOK)
 }
 
+func Put(url string, body interface{}, header map[string]string, validators ...ResponseValidator) ([]byte, error) {
+	return Do(http.MethodPut, url, body, header, make(map[string]interface{}), validators...)
+}
+
 func PostForm(url string, data url.Values, header map[string]string, validators ...ResponseValidator) ([]byte, error) {
 	header["Content-Type"] = "application/x-www-form-urlencoded"
 	body := internal.S2b(data.Encode())
@@ -42,7 +46,11 @@ func PostForm(url string, data url.Values, header map[string]string, validators 
 }
 
 func Post(url string, body interface{}, header map[string]string, validators ...ResponseValidator) ([]byte, error) {
-	resp, err := Request(http.MethodPost, url, body, header, make(map[string]interface{}), validators...)
+	return Do(http.MethodPost, url, body, header, make(map[string]interface{}), validators...)
+}
+
+func Do(method, url string, body interface{}, header map[string]string, query map[string]interface{}, validators ...ResponseValidator) ([]byte, error) {
+	resp, err := Request(method, url, body, header, make(map[string]interface{}), validators...)
 	if err != nil {
 		return nil, err
 	}

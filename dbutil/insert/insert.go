@@ -3,7 +3,10 @@ package insert
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
+
+	"github.com/joker-circus/gotools/internal"
 )
 
 // 生成批量创建 SQL 语句。
@@ -90,21 +93,37 @@ func initSQL(schema *Schema, reflectValue reflect.Value, defaultValue map[string
 
 // 获取结构体的所有值
 func getStructValues(reflectValue reflect.Value, schema *Schema, defaultValue map[string]reflect.Value) []interface{} {
-	data := make([]interface{}, len(schema.DBNames))
-	for idx, column := range schema.DBNames {
-		field := schema.FieldsByDBName[column]
-		rv := reflectValue.FieldByName(field.Name)
+	values := make(map[string]interface{})
+	r := &internal.StructX{T: reflectValue.Type(), V: reflectValue}
+	r.RangeFields(false, func(sf reflect.StructField, rv reflect.Value) bool {
+		field, ok := schema.FieldsByName[sf.Name]
+		if !ok {
+			return true
+		}
 
 		// 零值赋值
 		if rv.IsZero() && rv.CanSet() {
 			// sv.Type() == rv.Type()
-			if sv, ok := defaultValue[column]; ok {
-				data[idx] = sv.Interface()
-				continue
+			if sv, ok := defaultValue[field.DBName]; ok {
+				values[field.DBName] = sv.Interface()
+				return true
 			}
 		}
 
-		data[idx] = rv.Interface()
+		// 对于软删除/指针 Time 做特殊处理
+		// sf.Type.String() == "*time.Time"
+		if sf.Type.Kind() == reflect.Ptr && rv.IsZero() && strings.HasSuffix(sf.Type.String(), "Time") {
+			values[field.DBName] = nil
+			return true
+		}
+
+		values[field.DBName] = rv.Interface()
+		return true
+	})
+
+	data := make([]interface{}, len(schema.DBNames))
+	for idx, column := range schema.DBNames {
+		data[idx] = values[column]
 	}
 	return data
 }
