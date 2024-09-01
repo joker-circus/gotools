@@ -7,25 +7,25 @@ import (
 	"github.com/joker-circus/gotools/internal"
 )
 
-// 获取结构体中所有可导出 values 值，及 tagName 对应 structField 的映射关系
-func StructTagExportedFieldValues(dest interface{}, tagName string) (tags []interface{}, tagFields map[string]string) {
+// 获取结构体中所有可导出 values 值，及 tagFieldName 对应 structFieldName 的映射关系
+func StructTagExportedFieldValues(dest interface{}, tagName string) (fieldValues []interface{}, tagFields map[string]string) {
 	tagFields = make(map[string]string)
 	r, ok := NewStructX(dest)
 	if !ok {
 		return
 	}
 	r.RangeFields(false, func(sf reflect.StructField, v reflect.Value) bool {
-		tagValue := sf.Tag.Get(tagName)
-		if len(tagValue) == 0 {
+		fieldName, _ := StructTagFieldName(sf.Tag, tagName)
+		if len(fieldName) == 0 {
 			return true
 		}
 
-		if _, ok := tagFields[tagValue]; !ok {
-			tagFields[tagValue] = sf.Name
+		if _, ok := tagFields[fieldName]; !ok {
+			tagFields[fieldName] = sf.Name
 			if v.CanInterface() {
-				tags = append(tags, v.Interface())
+				fieldValues = append(fieldValues, v.Interface())
 			} else {
-				tags = append(tags, fmt.Sprint(v))
+				fieldValues = append(fieldValues, fmt.Sprint(v))
 			}
 		}
 		return true
@@ -33,36 +33,33 @@ func StructTagExportedFieldValues(dest interface{}, tagName string) (tags []inte
 	return
 }
 
-// 获取结构体中所有 tagName 值，及 tagName 对应 structField 的映射关系
-func StructTagAllFields(dest interface{}, tagName string) (tags []string, tagFields map[string]string) {
+// 获取结构体中所有 tagFieldName 值，及 tagFieldName 对应 structFieldName 的映射关系
+func StructTagAllFields(dest interface{}, tagName string) (fields []string, tagFields map[string]string) {
 	return StructTagFields(dest, true, tagName)
 }
 
-// 获取结构体中所有可导出字段 tagName 值，及 tagName 对应 structField 的映射关系
-func StructTagExportedFields(dest interface{}, tagName string) (tags []string, tagFields map[string]string) {
+// 获取结构体中所有可导出字段 tagFieldName 值，及 tagFieldName 对应 structFieldName 的映射关系
+func StructTagExportedFields(dest interface{}, tagName string) (fields []string, tagFields map[string]string) {
 	return StructTagFields(dest, false, tagName)
 }
 
-// StructTagFields 获取结构体中 tagName 值。
+// StructTagFields 获取结构体中 tagFieldName 值。
 // isExported 表示是否获取不可导出字段值。
-func StructTagFields(dest interface{}, isExported bool, tagName string) (tags []string, tagFields map[string]string) {
+func StructTagFields(dest interface{}, isExported bool, tagName string) (fields []string, tagFields map[string]string) {
 	tagFields = make(map[string]string)
 	r, ok := NewStructX(dest)
 	if !ok {
 		return
 	}
 	r.RangeFields(isExported, func(sf reflect.StructField, v reflect.Value) bool {
-		tagValue := sf.Tag.Get(tagName)
-		if tagName == "gorm" {
-			tagValue, _ = internal.GetGormTagColumnName(tagValue)
-		}
-		if len(tagValue) == 0 {
+		fieldName, _ := StructTagFieldName(sf.Tag, tagName)
+		if len(fieldName) == 0 {
 			return true
 		}
 
-		if _, ok := tagFields[tagValue]; !ok {
-			tagFields[tagValue] = sf.Name
-			tags = append(tags, tagValue)
+		if _, ok := tagFields[fieldName]; !ok {
+			tagFields[fieldName] = sf.Name
+			fields = append(fields, fieldName)
 		}
 
 		return true
@@ -131,7 +128,7 @@ func (r *StructX) structValueTagFields(structType reflect.Type, structValue refl
 }
 
 // 结构体数组转 Table 数据
-func StructArrayToTable(dest interface{}) (columns []interface{}, rows [][]interface{}) {
+func StructArrayToTable(dest interface{}, tagNames ...string) (columns []string, rows [][]interface{}) {
 	rv := reflect.Indirect(reflect.ValueOf(dest))
 	if rv.Kind() != reflect.Slice {
 		return
@@ -141,26 +138,35 @@ func StructArrayToTable(dest interface{}) (columns []interface{}, rows [][]inter
 		return
 	}
 
+	// json 标签兜底
+	tagNames = append(tagNames, "json")
+
 	for i := 0; i < rv.Len(); i++ {
-		rv.Index(i)
 		r := StructX{
-			T: rv.Index(i).Type(),
+			T: rv.Index(i).Type(), // 必须逐步获取元素类型
 			V: rv.Index(i),
+		}
+		if rv.Index(i).Kind() == reflect.Ptr {
+			r.V = r.V.Elem()
+			r.T = r.T.Elem()
+		}
+		if r.T.Kind() != reflect.Struct {
+			continue
 		}
 		tagFields := make(map[string]string)
 		var tags []interface{}
 		r.RangeFields(false, func(sf reflect.StructField, v reflect.Value) bool {
-			tagValue := sf.Tag.Get("json")
-			if len(tagValue) == 0 {
+			fieldName, _ := StructFieldNameByTagNames(sf, tagNames...)
+			if len(fieldName) == 0 {
 				return true
 			}
 
 			if i == 0 {
-				columns = append(columns, tagValue)
+				columns = append(columns, fieldName)
 			}
 
-			if _, ok := tagFields[tagValue]; !ok {
-				tagFields[tagValue] = sf.Name
+			if _, ok := tagFields[fieldName]; !ok {
+				tagFields[fieldName] = sf.Name
 				if v.CanInterface() {
 					tags = append(tags, v.Interface())
 				} else {
@@ -172,4 +178,116 @@ func StructArrayToTable(dest interface{}) (columns []interface{}, rows [][]inter
 		rows = append(rows, tags)
 	}
 	return
+}
+
+// 根据 dest 结构体，判断 requiredFields 是否都已赋值。
+func ValidateStruct(dest interface{}, tagName string, requiredFields ...string) (err error) {
+	if len(requiredFields) == 0 {
+		return nil
+	}
+
+	r, ok := NewStructX(dest)
+	if !ok {
+		return nil
+	}
+
+	requiredMap := make(map[string]struct{}, len(requiredFields))
+	for _, s := range requiredFields {
+		requiredMap[s] = struct{}{}
+	}
+
+	r.RangeFields(false, func(sf reflect.StructField, v reflect.Value) bool {
+		fieldName, ok := StructTagFieldName(sf.Tag, tagName)
+		if !ok {
+			return true
+		}
+
+		_, ok = requiredMap[fieldName]
+		if !ok {
+			return true
+		}
+
+		if v.IsValid() && v.IsZero() {
+			err = fmt.Errorf("%s 为必填字段", fieldName)
+			return false
+		}
+		return true
+	})
+
+	return
+}
+
+// 根据 dest 结构体映射对应的值。
+// 若 whitelist 有值，则仅获取 whitelist 内的字段值。
+func StructToMap(dest interface{}, tagName string, whitelist ...string) (fields map[string]interface{}, err error) {
+	r, ok := NewStructX(dest)
+	if !ok {
+		return nil, fmt.Errorf("dest must be struct")
+	}
+
+	whitelistMap := make(map[string]struct{})
+	for _, v := range whitelist {
+		whitelistMap[v] = struct{}{}
+	}
+	filter := func(fieldName string) (exist bool) {
+		exist = true
+		if len(whitelistMap) > 0 {
+			_, exist = whitelistMap[fieldName]
+		}
+		return exist
+	}
+
+	fields = make(map[string]interface{})
+	r.RangeFields(false, func(sf reflect.StructField, v reflect.Value) bool {
+		fieldName, ok := StructTagFieldName(sf.Tag, tagName)
+		if !ok {
+			return true
+		}
+
+		// 过滤不需要的字段
+		if !filter(fieldName) {
+			return true
+		}
+
+		if v.CanInterface() {
+			fields[fieldName] = v.Interface()
+		} else {
+			fields[fieldName] = fmt.Sprint(v)
+		}
+
+		return true
+	})
+	return
+}
+
+// 获取结构体字段的名称。
+// 若 tagNames 不为空则，则获取 tagName 优先获取到的值，
+// 否则默认获取 structFieldName 对应的蛇形/下划线字段名（例如：xx_y_y）。
+func StructFieldName(sf reflect.StructField, tagNames ...string) string {
+	fieldName, ok := StructFieldNameByTagNames(sf, tagNames...)
+	if ok {
+		return fieldName
+	}
+	return SnakeCase(sf.Name)
+}
+
+// 获取结构体字段的名称
+// 例如 json:"name,omitempty"、gorm:"column:name" 返回的都是 name
+func StructFieldNameByTagNames(sf reflect.StructField, tagNames ...string) (fieldName string, ok bool) {
+	for _, tagName := range tagNames {
+		if fieldName, ok = StructTagFieldName(sf.Tag, tagName); ok && fieldName != "" {
+			return fieldName, true
+		}
+	}
+	return "", false
+}
+
+// 获取结构体字段 Tag 对应的 FieldName 值，
+// 例如 json:"name,omitempty"、gorm:"column:name" 返回的都是 name
+func StructTagFieldName(tag reflect.StructTag, tagName string) (value string, ok bool) {
+	fieldName, ok := tag.Lookup(tagName)
+	if tagName == "gorm" {
+		fieldName, ok = internal.GetGormTagColumnName(fieldName)
+	}
+	return fieldName, ok
 }

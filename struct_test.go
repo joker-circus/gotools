@@ -48,18 +48,18 @@ var example _Example = _Example{
 
 func TestStructTagAllFields(t *testing.T) {
 	result := []string{"name", "age", "number", "de", "labels", "created_at", "d", "values", "value_2", "upper_values", "upper_value_2"}
-	tags, _ := StructTagAllFields(example, "json")
-	assert.Equal(t, result, tags, "the should be equal")
+	fields, _ := StructTagAllFields(example, "json")
+	assert.Equal(t, result, fields, "the should be equal")
 }
 
 func TestStructTagExportedFields(t *testing.T) {
 	result := []string{"name", "age", "number", "labels", "created_at", "upper_values", "upper_value_2"}
-	tags, _ := StructTagExportedFields(example, "json")
-	assert.Equal(t, result, tags, "the should be equal")
+	fields, _ := StructTagExportedFields(example, "json")
+	assert.Equal(t, result, fields, "the should be equal")
 }
 
 func TestStructTagExportedFieldValues(t *testing.T) {
 	result := []interface{}{example.Name, example.Age, uint(0), example.Labels, example.CreatedAt, example.Example2.Values, example.Example2.Value2}
-	tags, _ := StructTagExportedFieldValues(example, "json")
-	assert.Equal(t, result, tags, "the should be equal")
+	values, _ := StructTagExportedFieldValues(example, "json")
+	assert.Equal(t, result, values, "the should be equal")
 }

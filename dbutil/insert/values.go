@@ -9,6 +9,27 @@ import (
 )
 
 func FmtField(field interface{}) string {
+	if field == nil {
+		return "NULL"
+	}
+
+	if v, err := driver.DefaultParameterConverter.ConvertValue(field); err == nil {
+		switch vv := v.(type) {
+		case int64:
+			return fmt.Sprintf("%v", vv)
+		case float64:
+			return fmt.Sprintf("%v", vv)
+		case bool:
+			return fmt.Sprintf("%v", vv)
+		case []byte:
+			return fmt.Sprintf("'%s'", string(vv))
+		case string:
+			return fmt.Sprintf("'%s'", vv)
+		case time.Time:
+			return fmt.Sprintf("'%s'", vv.Format(DatetimeFormat))
+		}
+	}
+
 	ts, ok := field.(time.Time)
 	if ok {
 		field = ts.Format(DatetimeFormat)
