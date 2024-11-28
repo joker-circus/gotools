@@ -1,8 +1,9 @@
 package datatypes
 
 import (
-   	"fmt"
+	"fmt"
 	"time"
+
 	"database/sql/driver"
 )
 
@@ -16,13 +17,18 @@ const (
 )
 
 var (
-	zeroTime, _ = time.Parse(time.RFC3339, "1970-01-01T08:00:00+08:00")
+	SHLocation, _ = time.LoadLocation(zone)
+	zeroTime, _   = time.Parse(time.RFC3339, "1970-01-01T08:00:00+08:00")
+	emptyTime     Time
 )
 
 // UnmarshalJSON implements json unmarshal interface.
 func (t *Time) UnmarshalJSON(data []byte) (err error) {
+	if data == nil || string(data) == "null" || string(data) == `""` {
+		return nil
+	}
 	now, err := time.ParseInLocation(`"`+timeFormat+`"`, string(data), time.Local)
-  if err != nil {
+	if err != nil {
 		now, err = time.ParseInLocation(`"`+time.RFC3339+`"`, string(data), time.Local)
 	}
 	*t = Time(now)
@@ -58,9 +64,22 @@ func (t Time) DisplayDateString() string {
 	return time.Time(t).Format(dateFormat)
 }
 
-func (t Time) local() time.Time {
-	loc, _ := time.LoadLocation(zone)
-	return time.Time(t).In(loc)
+func (t Time) Local() time.Time {
+	return time.Time(t).In(SHLocation)
+}
+
+func (t Time) CNTime() Time {
+	return Time(t.Local())
+}
+
+// 纠正对应的时区，time => "2006-01-02 15:04:05" => 正确时区 time
+func (t Time) FixLoc(loc *time.Location) Time {
+	if t.IsZero() {
+		return t
+	}
+
+	tt, _ := time.ParseInLocation(timeFormat, time.Time(t).Format(timeFormat), loc)
+	return Time(tt)
 }
 
 // IsInitialized 检查是否已经被正确赋值过
@@ -112,6 +131,9 @@ func ZeroTime() Time {
 }
 
 func (t Time) IsZero() bool {
+	if t == emptyTime {
+		return true
+	}
 	return time.Time(t).Equal(zeroTime)
 }
 
@@ -131,4 +153,21 @@ func (t Time) AddDate(years int, months int, days int) Time {
 
 func (t Time) Format(layout string) string {
 	return time.Time(t).Format(layout)
+}
+
+func (t Time) SubDays(t1 Time) float64 {
+	return time.Time(t).Sub(time.Time(t1)).Hours() / 24.0
+}
+
+func (t Time) Day() int {
+	return time.Time(t).Day()
+}
+
+func (t Time) Hour() int {
+	return time.Time(t).Hour()
+}
+
+func (t Time) Add(d time.Duration) Time {
+	tt := time.Time(t).Add(d)
+	return Time(tt)
 }

@@ -90,6 +90,8 @@ func ExplainSQL(sql string, numericPlaceholder *regexp.Regexp, escaper string, a
 			if s := string(v); isPrintable(s) {
 				vars[idx] = escaper + strings.ReplaceAll(s, escaper, "\\"+escaper) + escaper
 			} else {
+				//vars[idx] = escaper + strings.ReplaceAll(fmt.Sprint(v), escaper, "\\"+escaper) + escaper
+				//binary 二进制数据 打印如下，但是直接插入有问题，使用 PreSQL 批量写入
 				vars[idx] = escaper + "<binary>" + escaper
 			}
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:

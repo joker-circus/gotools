@@ -20,13 +20,22 @@ func BuildInsertSQL(dest interface{}) (sql string, err error) {
 	return sqlBuild.ExplainSQL()
 }
 
-func BuildPreSQL(dest interface{}) (sql string, err error) {
+func BuildPreSQL(dest interface{}) (sql string, values []interface{}, err error) {
 	sqlBuild, err := buildSQL(dest)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	return sqlBuild.PreSQL()
+	preSQL, err := sqlBuild.PreSQL()
+	if err != nil {
+		return "", nil, err
+	}
+
+	for _, v := range sqlBuild.Values {
+		values = append(values, v...)
+	}
+
+	return preSQL, values, nil
 }
 
 func buildSQL(dest interface{}) (SQL, error) {
