@@ -1,5 +1,10 @@
 package generic
 
+import (
+	"encoding/json"
+	"math"
+)
+
 func MapWitchError[T any, R any](collection []T, iteratee func(item T, index int) (R, error)) ([]R, error) {
 	result := make([]R, len(collection))
 
@@ -254,6 +259,45 @@ func GroupByWithPoint[T any, U comparable](collection []T, iteratee func(item T)
 	return result
 }
 
+// 对数据进行分类后，再进行聚合处理，返回聚合后的结果值
+func GroupByThenReduce[T any, K comparable, V any](data []T, groupBy func(item T) K, reduce func(key K, values []T) V) []V {
+	result := make([]V, 0, len(data))
+	for k, values := range GroupBy(data, groupBy) {
+		result = append(result, reduce(k, values))
+	}
+	return result
+}
+
+// 对数据进行分类后，再进行聚合处理，返回聚合后的结果值
+func GroupByThenMapReduce[T any, K comparable, V any](data []T, groupBy func(item T) K, reduce func(key K, values []T) V) map[K]V {
+	result := make(map[K]V)
+	for k, values := range GroupBy(data, groupBy) {
+		result[k] = reduce(k, values)
+	}
+	return result
+}
+
+// 对数据进行分类后，再进行聚合处理，返回聚合后的结果值。
+// 针对特殊情况 key 值不可比较，对 key 值使用 JSON 序列化后聚合。
+func GroupByJsonThenReduce[T, K, V any](data []T, groupBy func(item T) K, reduce func(key K, values []T) V) []V {
+	// 内部使用 *T 类型，是为了减少产生过多的内存
+	keyMap := map[string]*K{}
+	prtData := ToSlicePtr(data)
+	groupData := GroupBy(prtData, func(item *T) string {
+		key := groupBy(*item)
+		keyStr := jsonString(key)
+		keyMap[keyStr] = &key
+		return keyStr
+	})
+
+	result := make([]V, 0, len(data))
+	for k, prtValues := range groupData {
+		values := FromSlicePtr(prtValues)
+		result = append(result, reduce(*keyMap[k], values))
+	}
+	return result
+}
+
 // Keys creates an array of the map keys.
 // Play: https://go.dev/play/p/Uu11fHASqrU
 func Keys[K comparable, V any](in map[K]V) []K {
@@ -392,4 +436,46 @@ func MajorityElement[T comparable](list []T) (majority T) {
 		}
 	}
 	return majority
+}
+
+
+
+// ToSlicePtr returns a slice of pointer copy of value.
+func FromSlicePtr[T any](collection []*T) []T {
+	var zero T
+	return Map(collection, func(x *T, _ int) T {
+		if x == nil {
+			return zero
+		}
+		return *x
+	})
+}
+
+// ToSlicePtr returns a slice of pointer copy of value.
+func ToSlicePtr[T any](collection []T) []*T {
+	return Map(collection, func(x T, _ int) *T {
+		return &x
+	})
+}
+
+// Abs returns the absolute value of x.
+//
+// Special cases are:
+//	Abs(±Inf) = +Inf
+//	Abs(NaN) = NaN
+func Abs[T Integer | Float](x T) T {
+	return T(math.Abs(float64(x)))
+}
+
+func jsonString(data interface{}) string {
+	if v, ok := data.(string); ok {
+		return v
+	}
+
+	if v, ok := data.([]byte); ok {
+		return string(v)
+	}
+
+	b, _ := json.Marshal(data)
+	return string(b)
 }

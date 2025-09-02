@@ -272,3 +272,56 @@ func RangeTime(t1, t2 time.Time, interval time.Duration, f func(t1, t2 time.Time
 		t1 = end
 	}
 }
+
+// DateIterator 定义迭代器回调函数类型
+// 参数：start, end, mid 分别表示起始时间、结束时间、中间时间
+// 返回值：bool，false 表示终止迭代
+type DateIterator func(start, end, mid time.Time) bool
+
+// BinaryDateAccess 使用二分法访问两个日期之间的所有中间日期
+// 通过回调函数的方式实现迭代器模式
+func BinaryDateAccess(start, end time.Time, iterator DateIterator) {
+	// 确保start在end之前
+	if start.After(end) {
+		start, end = end, start
+	}
+
+	// 只保留日期部分，忽略时间
+	//start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
+	//end = time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location())
+
+	// 使用递归的二分法访问
+	binarySearch(start, end, iterator)
+}
+
+// binarySearch 递归实现二分法访问
+func binarySearch(start, end time.Time, iterator DateIterator) bool {
+	// 计算天数差
+	daysDiff := int(end.Sub(start).Hours() / 24)
+
+	// 如果相邻或相同，则无中间日期
+	if daysDiff <= 1 {
+		return true
+	}
+
+	// 找到中点日期
+	midDays := daysDiff / 2
+	midDate := start.AddDate(0, 0, midDays)
+
+	// 调用迭代器，如果返回false则终止
+	if !iterator(start, end, midDate) {
+		return false
+	}
+
+	// 递归处理左半部分（start到midDate）
+	if !binarySearch(start, midDate, iterator) {
+		return false
+	}
+
+	// 递归处理右半部分（midDate到end）
+	if !binarySearch(midDate, end, iterator) {
+		return false
+	}
+
+	return true
+}
